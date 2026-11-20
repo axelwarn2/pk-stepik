@@ -1,0 +1,59 @@
+services:
+  pk-nginx:
+    image: nginx:latest
+    ports:
+      - 80:80
+    depends_on:
+      - pk-php
+    restart: unless-stopped
+    volumes:
+      - ./docker/nginx/logs:/var/log/nginx
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+      - ./:/var/www
+    networks:
+      - pk
+
+  pk-php:
+    build:
+      context: .
+      dockerfile: ./docker/php/Dockerfile
+    volumes:
+      - ./:/var/www
+    restart: unless-stopped
+    depends_on:
+      - pk-mysql
+    networks:
+      - pk
+
+  pk-mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT}:3306"
+    networks:
+      - pk
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql:/docker-entrypoint-initdb.d
+
+  pk-adminer:
+    image: adminer:latest
+    restart: unless-stopped
+    depends_on:
+      - pk-mysql
+    ports:
+      - 8080:8080
+    networks:
+      - pk
+
+networks:
+  pk:
+    driver: bridge
+
+volumes:
+  mysql-data:
